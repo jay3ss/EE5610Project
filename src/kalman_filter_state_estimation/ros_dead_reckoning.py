@@ -50,7 +50,7 @@ class ROSDeadReckoning(DeadReckoning):
         super(ROSDeadReckoning, self).__init__(wheel_radius, wheel_distance, dt)
 
     def imu_cb(self, data):
-        pass
+        self.angular_velocity = data.angular_velocity.z
 
     def joint_state_cb(self, data):
         # v_l = self.state.wheel_radius * data.velocity[0]
