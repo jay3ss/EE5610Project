@@ -1,0 +1,93 @@
+#!/usr/bin/env python
+from threading import Lock
+import math
+
+import rospy
+
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import JointState
+from kalman_filter_state_estimation.msg import State
+
+from tf.transformations import euler_from_quaternion
+from tf.transformations import quaternion_from_euler
+
+def js_cb(data):
+    """Update the velocities based on wheel speed"""
+    v_l = data.velocity[0]
+    v_r = data.velocity[1]
+    global joint_states
+    joint_states = data
+    (ang_vel, lin_vel) = update_velocities(v_r, v_l)
+    global state
+    qx = state.pose.orientation.x
+    qy = state.pose.orientation.y
+    qz = state.pose.orientation.z
+    qw = state.pose.orientation.w
+    (r, p, theta) = euler_from_quaternion([qx, qy, qz, qw])
+    x_dot = lin_vel * math.cos(theta)
+    y_dot = lin_vel * math.sin(theta)
+    with state_lock:
+        state.header = data.header
+        state.velocity.linear.x = x_dot
+        state.velocity.linear.y = y_dot
+        state.velocity.angular.z = ang_vel
+
+def odom_cb(data):
+    """Update the position and orientation"""
+    global odom
+    odom = data
+
+    global state
+    with state_lock:
+        state.header = data.header
+        state.pose = data.pose.pose
+
+
+def update_velocities(v_r, v_l):
+    """Updates the velocities."""
+    # v_r *= math.pi/180
+    # v_l *= math.pi/180
+    global wheel_radius
+    v_r *= wheel_radius
+    v_l *= wheel_radius
+    return (calc_lin_vel(v_r, v_l), calc_ang_vel(v_r, v_l))
+
+def calc_ang_vel(v_r, v_l):
+    """Private method to calculate the angular velocity
+
+    w = (v_r - v_l) / l # angular velocity (l is separation of wheels)
+    """
+    global wheel_distance
+    return (v_r - v_l) / wheel_distance
+    # print angular_velocity
+
+def calc_lin_vel(v_r, v_l):
+    """Private method to calculate the linear velocity
+
+    v = (v_r + v_l) / 2 # linear velocity
+    """
+    return (v_r + v_l) / 2
+
+state_lock = Lock()
+
+js_topic = '/joint_states'
+odom_topic = '/dead_reckoning/odom'
+state_topic = '/state'
+
+joint_states = JointState()
+odom = Odometry()
+state = State()
+
+wheel_radius = 0.035
+wheel_distance = 0.250
+
+js_sub = rospy.Subscriber(js_topic, JointState, js_cb)
+odom_sub = rospy.Subscriber(odom_topic, Odometry, odom_cb)
+state_pub = rospy.Publisher(state_topic, State, queue_size=10)
+
+if __name__ == '__main__':
+    rospy.init_node('topic_combiner')
+    rate = rospy.Rate(10)
+    while not rospy.is_shutdown():
+        state_pub.publish(state)
+        rate.sleep()

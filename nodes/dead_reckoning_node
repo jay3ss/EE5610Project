@@ -1,0 +1,10 @@
+#!/usr/bin/env python
+import rospy
+from kalman_filter_state_estimation.ros_dead_reckoning import ROSDeadReckoning
+
+def main():
+    dead_reckoning = ROSDeadReckoning()
+    dead_reckoning.run()
+
+if __name__ == '__main__':
+    main()

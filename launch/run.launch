@@ -1,0 +1,11 @@
+<launch>
+  <include file="$(find kalman_filter_state_estimation)/launch/bag.launch"/>
+  <node pkg="kalman_filter_state_estimation" type="topic_combiner" name="topic_combiner_node"/>
+  <node pkg="kalman_filter_state_estimation" type="dead_reckoning_node" name="dead_reckoning_node"/>
+  <!-- <node pkg="kalman_filter_state_estimation" type="kalman_node" name="kalman"/> -->
+  <arg name="args" default="0 0 0 0 0 0 /world /odom 100"/>
+  <node pkg="tf" type="static_transform_publisher" name="static_tf_pub" args="$(arg args)"/>
+  <node pkg="rviz" type="rviz" name="rviz"/>
+  <arg name="log" default="false"/>
+
+</launch>

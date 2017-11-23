@@ -1,0 +1,137 @@
+#! /usr/bin/env python
+"""
+Test Data
+Written by: Josh Saunders
+Date: 4/15/2016
+
+Saves data from one file and creates an Excel file from it. This currently only
+works for a set of data with two columns.
+
+NOTE: This can only create new files. It CANNOT read or modify existing files
+      It will happily overwrite any existing files though ;)
+
+Use: In the terminal type: ./logger.py [source] (The filename will have a
+     timestamp appended to it to ensure that the filenames are unique.)
+"""
+from threading import Lock
+# We're using ROS
+import rospy
+
+from tf.transformations import euler_from_quaternion
+
+# The messages that we need
+from nav_msgs.msg import Odometry
+from sensor_msgs.msg import JointState
+
+# Python libraries
+from sys import argv
+from datetime import datetime
+
+# This let's us write to an Excel file
+import xlsxwriter
+
+def write_to_worksheet(t, x, y, theta, v_r, v_l, sheet):
+    global i
+    global data_lock
+    # lock the resource so we don't get data overwritten
+    with data_lock:
+        # Write to each Excel file
+        sheet.write('A{}'.format(i), t)
+        sheet.write('B{}'.format(i), x)
+        sheet.write('C{}'.format(i), y)
+        sheet.write('D{}'.format(i), theta)
+        sheet.write('E{}'.format(i), v_r)
+        sheet.write('F{}'.format(i), v_l)
+    i += 1
+
+
+def odom_cb(data):
+    with data_lock:
+        odom = data
+
+    wheel_radius = 0.035
+    global workbook_sheet
+    global odom
+    global joint_states
+    t = odom.header.stamp.to_sec()
+    x = odom.pose.pose.position.x
+    y = odom.pose.pose.position.y
+    z = odom.pose.pose.position.z
+    qx = odom.pose.pose.orientation.x
+    qy = odom.pose.pose.orientation.y
+    qz = odom.pose.pose.orientation.z
+    qw = odom.pose.pose.orientation.w
+    (r, p, theta) = euler_from_quaternion([qx, qy, qz, qw])
+    v_l = joint_states.velocity[0] * wheel_radius
+    v_r = joint_states.velocity[1] * wheel_radius
+    write_to_worksheet(t, x, y, theta, v_r, v_l, workbook_sheet)
+
+def joint_state_cb(data):
+    with data_lock:
+        joint_states = data
+
+    wheel_radius = 0.035
+    global workbook_sheet
+    global odom
+    global joint_states
+
+    t = odom.header.stamp.to_sec()
+    x = odom.pose.pose.position.x
+    y = odom.pose.pose.position.y
+    z = odom.pose.pose.position.z
+    qx = odom.pose.pose.orientation.x
+    qy = odom.pose.pose.orientation.y
+    qz = odom.pose.pose.orientation.z
+    qw = odom.pose.pose.orientation.w
+    (r, p, theta) = euler_from_quaternion([qx, qy, qz, qw])
+    v_l = joint_states.velocity[0] * wheel_radius
+    v_r = joint_states.velocity[1] * wheel_radius
+    write_to_worksheet(t, x, y, theta, v_r, v_l, workbook_sheet)
+# Iterator
+i = 2
+
+odom = Odometry()
+joint_states = JointState()
+joint_states.velocity[0] = 0.0
+joint_states.velocity[1] = 0.0
+data_lock = Lock()
+
+# Take the argument from the terminal and use it as part of the filename
+script, test_name = argv
+
+# Create the file name
+timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+filename = test_name + '-' + timestamp +  '.xlsx'
+
+# Create the Excel files with the given file name
+workbook = xlsxwriter.Workbook(filename)
+workbook_sheet = workbook.add_worksheet()
+
+
+# Widen the first column to make the text clearer.
+workbook_sheet.set_column('A:A', 20)
+
+# Write the titles of each column
+# Horizontal of graph, then vertical
+# horizontal = 'Time (s)'
+workbook_sheet.write('A1', 'Time (s)')
+workbook_sheet.write('B1', 'X')
+workbook_sheet.write('C1', 'Y')
+workbook_sheet.write('D1', 'Theta')
+workbook_sheet.write('E1', 'V_r')
+workbook_sheet.write('F1', 'V_l')
+
+# ROS initializations
+rospy.init_node('test_data_saver')
+rate = rospy.Rate(100)
+
+odom_sub = rospy.Subscriber('/dead_reckoning/odom', Odometry, odom_cb)
+joint_state_sub = rospy.Subscriber('/joint_states', JointState, joint_state_cb)
+
+if __name__ == '__main__':
+    rospy.spin()
+
+
+
+# Close the Excel file
+workbook.close()
