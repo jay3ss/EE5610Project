@@ -25,5 +25,14 @@ class State(object):
         """Returns theta state variable"""
         return self.state.item(2)
 
+    def set_x(self, x):
+        self.state[0] = x
+
+    def set_y(self, y):
+        self.state[0] = y
+
+    def set_theta(self, theta):
+        self.state[0] = theta
+
     def update(self, x, y, theta):
         self.state = np.array([[x], [y], [theta]], dtype=float)
