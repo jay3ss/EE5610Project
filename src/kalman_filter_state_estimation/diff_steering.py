@@ -29,10 +29,10 @@ class State(object):
         self.state[0] = x
 
     def set_y(self, y):
-        self.state[0] = y
+        self.state[1] = y
 
     def set_theta(self, theta):
-        self.state[0] = theta
+        self.state[2] = theta
 
     def update(self, x, y, theta):
         self.state = np.array([[x], [y], [theta]], dtype=float)
