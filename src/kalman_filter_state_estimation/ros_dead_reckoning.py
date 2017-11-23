@@ -22,9 +22,9 @@ class ROSDeadReckoning(DeadReckoning):
 
         # IMU information
         # Not using IMU information anymore
-        # name = '/mobile_base/sensors/imu_data'
-        # imu_topic = rospy.get_param('~imu_topic', name)
-        # imu_sub = rospy.Subscriber(imu_topic, Imu, self.imu_cb)
+        name = '/mobile_base/sensors/imu_data'
+        imu_topic = rospy.get_param('~imu_topic', name)
+        imu_sub = rospy.Subscriber(imu_topic, Imu, self.imu_cb)
 
         # JointState information
         name = '/joint_states'
@@ -48,6 +48,9 @@ class ROSDeadReckoning(DeadReckoning):
         dt = 1 / update_rate
 
         super(ROSDeadReckoning, self).__init__(wheel_radius, wheel_distance, dt)
+
+    def imu_cb(self, data):
+        pass
 
     def joint_state_cb(self, data):
         # v_l = self.state.wheel_radius * data.velocity[0]
