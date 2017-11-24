@@ -2,6 +2,7 @@ from __future__ import division
 
 import rospy
 from tf.transformations import quaternion_from_euler
+from tf.transformations import euler_from_quaternion
 
 from sensor_msgs.msg import Imu
 from sensor_msgs.msg import JointState
@@ -51,6 +52,12 @@ class ROSDeadReckoning(DeadReckoning):
 
     def imu_cb(self, data):
         self.angular_velocity = data.angular_velocity.z
+        qx = data.orientation.x
+        qy = data.orientation.y
+        qz = data.orientation.z
+        qw = data.orientation.w
+        (r, p, theta) = euler_from_quaternion([qx, qy, qz, qw])
+        self.state.set_theta(theta)
 
     def joint_state_cb(self, data):
         # v_l = self.state.wheel_radius * data.velocity[0]
