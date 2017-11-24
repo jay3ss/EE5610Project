@@ -12,7 +12,7 @@ import kalman_filter_state_estimation.utils as utils
 
 class DeadReckoning(object):
     """Dead reckoning class"""
-    def __init__(self, wheel_radius, wheel_distance, dt):
+    def __init__(self, wheel_radius, wheel_distance, dt, init_state):
         """Constructor"""
         self.right_velocity = 0.0
         self.left_velocity = 0.0
@@ -23,7 +23,7 @@ class DeadReckoning(object):
         self.yaw = 0.0
         self.dt = dt
 
-        self.state = State(wheel_radius, wheel_distance)
+        self.state = State(wheel_radius, wheel_distance, init_state)
 
     def _calc_ang_vel(self, v_r, v_l):
         """Private method to calculate the angular velocity
