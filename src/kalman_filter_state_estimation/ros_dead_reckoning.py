@@ -41,6 +41,11 @@ class ROSDeadReckoning(DeadReckoning):
         self.odom_child_frame_id = rospy.get_param(
             '~odom_child_frame_id', 'base_link')
 
+        init_x = rospy.get_param('~initial_x', 0.0)
+        init_y = rospy.get_param('~initial_y', 0.0)
+        init_theta = rospy.get_param('~initial_theta', -0.08946428280993846)
+        init_state = (init_x, init_y, init_theta)
+
         # Differential steering model information
         # Defaults used are from the turtlebot.urdf file found in the (modified)
         # turtlebot_description package
@@ -48,7 +53,8 @@ class ROSDeadReckoning(DeadReckoning):
         wheel_distance = rospy.get_param('~wheel_distance', 0.230)
         dt = 1 / update_rate
 
-        super(ROSDeadReckoning, self).__init__(wheel_radius, wheel_distance, dt)
+        super(ROSDeadReckoning, self).__init__(
+            wheel_radius, wheel_distance, dt, init_state)
 
     def imu_cb(self, data):
         self.angular_velocity = data.angular_velocity.z
