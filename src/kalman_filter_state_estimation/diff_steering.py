@@ -3,11 +3,15 @@ import numpy as np
 
 class State(object):
     """Class for the model parameters of the differential steering robot"""
-    def __init__(self, wheel_radius, wheel_distance):
+    def __init__(self, wheel_radius, wheel_distance, init_state=(0,0,0)):
         self.state = np.zeros((3, 1), dtype=float)
         self.angular_velocity = 0.0
         self.wheel_radius = wheel_radius
         self.wheel_distance = wheel_distance
+        (x, y, theta) = init_state
+        self.set_x(x)
+        self.set_y(y)
+        self.set_theta(theta)
 
     def get_x(self):
         """Returns x state variable"""
