@@ -1,0 +1,23 @@
+#!/usr/bin/env python
+import rospy
+
+from nav_msgs.msg import Odometry
+from kalman_filter_state_estimation.msg import State
+
+odom_topic = '/ground_thruth'
+state_topic = '/state'
+
+odom = Odometry()
+state = State()
+
+def odom_cb(data):
+    pass
+
+def state_cb(data):
+    pass
+
+def write(data):
+    pass
+
+odom_sub = rospy.Subscriber(odom_sub, Odometry, odom_cb)
+state_sub = rospy.Subscriber(state_topic, State, state_cb)
