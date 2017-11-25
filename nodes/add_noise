@@ -1,0 +1,98 @@
+#!/usr/bin/env python
+import random
+# import copy
+from copy import deepcopy
+
+import rospy
+
+from sensor_msgs.msg import Imu
+from sensor_msgs.msg import JointState
+from std_msgs.msg import Header
+
+from tf.transformations import euler_from_quaternion
+from tf.transformations import quaternion_from_euler
+
+# Noise parameters
+ang_vel_mu = rospy.get_param('~angular_velocity_mu', 0.0)
+ang_vel_sigma = rospy.get_param('~angular_velocity_sigma', 0.07) # radians
+
+orientation_mu = rospy.get_param('~orientation_mu', 0.0)
+orientation_sigma = rospy.get_param('~orientation_sigma', 0.5) # radians
+
+v_r_mu = rospy.get_param('~v_r_mu', 0.0)
+v_r_sigma =rospy.get_param('~v_r_sigma',  0.3)
+
+v_l_mu = rospy.get_param('~v_l_mu', 0.0)
+v_l_sigma = rospy.get_param('~v_l_sigma', 0.3) # degrees
+
+def imu_cb(data):
+    global orientation_mu
+    global orientation_sigma
+    mu = orientation_mu
+    sigma = orientation_sigma
+    imu = deepcopy(data)
+    qx = imu.orientation.x
+    qy = imu.orientation.y
+    qz = imu.orientation.z
+    qw = imu.orientation.w
+    (r, p, yaw) = euler_from_quaternion([qx, qy, qz, qw])
+    yaw += random.gauss(mu, sigma)
+    (qx, qy, qz, qw) = quaternion_from_euler(r, p, yaw)
+    imu.orientation.x = qx
+    imu.orientation.y = qy
+    imu.orientation.z = qz
+    imu.orientation.w = qw
+    global ang_vel_mu
+    global ang_vel_sigma
+    mu = ang_vel_mu
+    sigma = ang_vel_sigma
+    ang_vel = imu.angular_velocity.z
+    ang_vel += random.gauss(mu, sigma)
+    imu.angular_velocity.z = ang_vel
+    global imu_pub
+    imu_pub.publish(imu)
+
+def joint_state_cb(data):
+    global v_l_mu
+    global v_l_sigma
+    global v_r_mu
+    global v_r_sigma
+
+    joint_states = deepcopy(data)
+
+    v_l = joint_states.velocity[0]
+    v_l += random.gauss(v_l_mu, v_l_sigma)
+
+    v_r = joint_states.velocity[1]
+    v_r += random.gauss(v_r_mu, v_r_sigma)
+
+    joint_states.velocity = (v_l, v_r)
+
+    global joint_state_pub
+    joint_state_pub.publish(joint_states)
+
+def main():
+    rospy.init_node('add_noise')
+    rospy.spin()
+
+# IMU information
+name = '/mobile_base/sensors/imu_data'
+imu_topic = rospy.get_param('~imu_sub_topic', name)
+imu_sub = rospy.Subscriber(imu_topic, Imu, imu_cb)
+
+name = '/noisy/imu'
+imu_topic = rospy.get_param('~imu_pub_topic', name)
+imu_pub = rospy.Publisher(imu_topic, Imu, queue_size=10)
+
+# JointState information
+name = '/joint_states'
+joint_state_topic = rospy.get_param('~joint_state_sub_topic', name)
+joint_state_sub = rospy.Subscriber(
+    joint_state_topic, JointState, joint_state_cb)
+
+name = '/noisy/joint_states'
+joint_state_topic = rospy.get_param('~imu_pub_topic', name)
+joint_state_pub = rospy.Publisher(joint_state_topic, JointState, queue_size=10)
+
+if __name__ == '__main__':
+    main()
