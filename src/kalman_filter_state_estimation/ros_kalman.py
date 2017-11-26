@@ -1,5 +1,7 @@
 from __future__ import division
 
+from threading import Lock
+
 import math
 import numpy as np
 import rospy
@@ -48,7 +50,7 @@ class ROSKalman(Kalman):
         self.wheel_radius = rospy.get_param('~wheel_radius', 0.035)
         self.wheel_distance = rospy.get_param('~wheel_distance', 0.230)
 
-
+        self.data_lock = Lock()
 
         # self.throttle = 20
         # self.num_js_calls = 0
@@ -124,7 +126,8 @@ class ROSKalman(Kalman):
         # self.publish_state()
 
     def state_cb(self, data):
-        self.header = data.header
+        with self.data_lock:
+            self.header.stamp = data.header.stamp
         xn = data.pose.position.x
         yn = data.pose.position.y
 
@@ -156,7 +159,10 @@ class ROSKalman(Kalman):
 
     def publish_state(self):
         odom = Odometry()
-        odom.header.stamp = rospy.Time.now()
+        # odom.header = self.header
+        with self.data_lock:
+            odom.header.stamp = self.header.stamp
+        # odom.header.stamp = rospy.get_rostime()
         odom.header.frame_id = self.odom_frame_id
         odom.child_frame_id = self.odom_child_frame_id
         odom.pose.pose.position.x = self.get_x()
@@ -164,6 +170,9 @@ class ROSKalman(Kalman):
         quat = quaternion_from_euler(0, 0, self.get_theta())
         odom.pose.pose.orientation.z = quat[2]
         odom.pose.pose.orientation.w = quat[3]
+        odom.twist.twist.linear.x = self.get_xdot()
+        odom.twist.twist.linear.y = self.get_ydot()
+        odom.twist.twist.angular.z = self.get_thetadot()
         self.odom_pub.publish(odom)
         # print('x: %f\ty: %f\t yaw: %f'%(self.get_x(), self.get_y(), self.get_theta()))
 

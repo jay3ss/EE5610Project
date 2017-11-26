@@ -1,5 +1,7 @@
 from __future__ import division
 
+from threading import Lock
+
 import rospy
 from tf.transformations import quaternion_from_euler
 from tf.transformations import euler_from_quaternion
@@ -53,10 +55,18 @@ class ROSDeadReckoning(DeadReckoning):
         wheel_distance = rospy.get_param('~wheel_distance', 0.230)
         dt = 1 / update_rate
 
+        self.odom = Odometry()
+        self.odom.header.frame_id = self.odom_frame_id
+        self.odom.child_frame_id = self.odom_child_frame_id
+
+        self.data_lock = Lock()
+
         super(ROSDeadReckoning, self).__init__(
             wheel_radius, wheel_distance, dt, init_state)
 
     def imu_cb(self, data):
+        with self.data_lock:
+            self.odom.header.stamp = data.header.stamp
         self.angular_velocity = data.angular_velocity.z
         qx = data.orientation.x
         qy = data.orientation.y
@@ -68,6 +78,8 @@ class ROSDeadReckoning(DeadReckoning):
     def joint_state_cb(self, data):
         # v_l = self.state.wheel_radius * data.velocity[0]
         # v_r = self.state.wheel_radius * data.velocity[1]
+        with self.data_lock:
+            self.odom.header.stamp = data.header.stamp
         v_l = data.velocity[0]
         v_r = data.velocity[1]
         self.update_velocities(v_r, v_l)
@@ -77,17 +89,17 @@ class ROSDeadReckoning(DeadReckoning):
         lin_vel = self.linear_velocity
         ang_vel = self.angular_velocity
         self.update_state(lin_vel, ang_vel)
-        odom = Odometry()
-        odom.header.stamp = rospy.Time.now()
-        odom.header.frame_id = self.odom_frame_id
-        odom.child_frame_id = self.odom_child_frame_id
-        odom.pose.pose.position.x = self.state.get_x()
-        odom.pose.pose.position.y = self.state.get_y()
+        # odom = Odometry()
+        # self.odom.header.stamp = rospy.Time.now()
+        # self.odom.header.frame_id = self.odom_frame_id
+        # self.odom.child_frame_id = self.odom_child_frame_id
+        self.odom.pose.pose.position.x = self.state.get_x()
+        self.odom.pose.pose.position.y = self.state.get_y()
         yaw = self.state.get_theta()
         quat = quaternion_from_euler(0, 0, yaw)
-        odom.pose.pose.orientation.z = quat[2]
-        odom.pose.pose.orientation.w = quat[3]
-        self.odom_pub.publish(odom)
+        self.odom.pose.pose.orientation.z = quat[2]
+        self.odom.pose.pose.orientation.w = quat[3]
+        self.odom_pub.publish(self.odom)
 
     def run(self):
         while not rospy.is_shutdown():
