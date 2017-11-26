@@ -1,4 +1,5 @@
 import numpy as np
+import math
 
 class Kalman(object):
 
@@ -26,15 +27,16 @@ class Kalman(object):
         # self.H = np.identity(6)
 
         #Process/State noise
-        vel_noise_std = 2
-        pos_noise_std = 5
+        vel_noise_std = 10
+        pos_noise_std = 10
+        ang_noise_std = 5*math.pi/180
         self.Q = np.array([
             [pos_noise_std*pos_noise_std,0,0,0,0,0],
             [0,pos_noise_std*pos_noise_std,0,0,0,0],
-            [0,0,pos_noise_std*pos_noise_std,0,0,0],
+            [0,0,ang_noise_std*ang_noise_std,0,0,0],
             [0,0,0,vel_noise_std*vel_noise_std,0,0],
             [0,0,0,0,vel_noise_std*vel_noise_std,0],
-            [0,0,0,0,0,vel_noise_std*vel_noise_std]
+            [0,0,0,0,0,ang_noise_std*ang_noise_std]
         ])
 
         #Sensor/Measurement noise

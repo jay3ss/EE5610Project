@@ -127,7 +127,7 @@ class ROSKalman(Kalman):
 
     def state_cb(self, data):
         with self.data_lock:
-            self.header.stamp = data.header.stamp
+            self.header.stamp = rospy.Time.now()
         xn = data.pose.position.x
         yn = data.pose.position.y
 
@@ -161,7 +161,7 @@ class ROSKalman(Kalman):
         odom = Odometry()
         # odom.header = self.header
         with self.data_lock:
-            odom.header.stamp = self.header.stamp
+            odom.header.stamp = rospy.Time.now()
         # odom.header.stamp = rospy.get_rostime()
         odom.header.frame_id = self.odom_frame_id
         odom.child_frame_id = self.odom_child_frame_id

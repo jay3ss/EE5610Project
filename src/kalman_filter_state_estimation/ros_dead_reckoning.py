@@ -25,12 +25,12 @@ class ROSDeadReckoning(DeadReckoning):
 
         # IMU information
         # Not using IMU information anymore
-        name = '/mobile_base/sensors/imu_data'
+        name = '/noisy/imu'
         imu_topic = rospy.get_param('~imu_topic', name)
         imu_sub = rospy.Subscriber(imu_topic, Imu, self.imu_cb)
 
         # JointState information
-        name = '/joint_states'
+        name = '/noisy/joint_states'
         imu_topic = rospy.get_param('~joint_state_topic', name)
         joint_state_sub = rospy.Subscriber(
             imu_topic, JointState, self.joint_state_cb)
@@ -66,7 +66,7 @@ class ROSDeadReckoning(DeadReckoning):
 
     def imu_cb(self, data):
         with self.data_lock:
-            self.odom.header.stamp = data.header.stamp
+            self.odom.header.stamp = rospy.Time.now()
         self.angular_velocity = data.angular_velocity.z
         qx = data.orientation.x
         qy = data.orientation.y
@@ -79,7 +79,7 @@ class ROSDeadReckoning(DeadReckoning):
         # v_l = self.state.wheel_radius * data.velocity[0]
         # v_r = self.state.wheel_radius * data.velocity[1]
         with self.data_lock:
-            self.odom.header.stamp = data.header.stamp
+            self.odom.header.stamp = rospy.Time.now()
         v_l = data.velocity[0]
         v_r = data.velocity[1]
         self.update_velocities(v_r, v_l)
@@ -90,7 +90,7 @@ class ROSDeadReckoning(DeadReckoning):
         ang_vel = self.angular_velocity
         self.update_state(lin_vel, ang_vel)
         # odom = Odometry()
-        # self.odom.header.stamp = rospy.Time.now()
+        self.odom.header.stamp = rospy.Time.now()
         # self.odom.header.frame_id = self.odom_frame_id
         # self.odom.child_frame_id = self.odom_child_frame_id
         self.odom.pose.pose.position.x = self.state.get_x()
