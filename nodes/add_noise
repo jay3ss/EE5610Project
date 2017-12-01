@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import random
-# import copy
+import math
 from copy import deepcopy
 
 import rospy
@@ -12,18 +12,20 @@ from std_msgs.msg import Header
 from tf.transformations import euler_from_quaternion
 from tf.transformations import quaternion_from_euler
 
+rospy.init_node('add_noise')
+
 # Noise parameters
 ang_vel_mu = rospy.get_param('~angular_velocity_mu', 0.0)
-ang_vel_sigma = rospy.get_param('~angular_velocity_sigma', 0.07) # radians
+ang_vel_sigma = rospy.get_param('~angular_velocity_sigma', 15*math.pi/180) # rad/s
 
 orientation_mu = rospy.get_param('~orientation_mu', 0.0)
-orientation_sigma = rospy.get_param('~orientation_sigma', 0.5) # radians
+orientation_sigma = rospy.get_param('~orientation_sigma', 15*math.pi/180) # rad
 
 v_r_mu = rospy.get_param('~v_r_mu', 0.0)
-v_r_sigma =rospy.get_param('~v_r_sigma',  0.3)
+v_r_sigma =rospy.get_param('~v_r_sigma',  5) # degrees
 
 v_l_mu = rospy.get_param('~v_l_mu', 0.0)
-v_l_sigma = rospy.get_param('~v_l_sigma', 0.3) # degrees
+v_l_sigma = rospy.get_param('~v_l_sigma', 5) # degrees
 
 def imu_cb(data):
     global orientation_mu
@@ -57,6 +59,7 @@ def joint_state_cb(data):
     global v_l_sigma
     global v_r_mu
     global v_r_sigma
+    global joint_state_pub
 
     joint_states = deepcopy(data)
 
@@ -72,7 +75,6 @@ def joint_state_cb(data):
     joint_state_pub.publish(joint_states)
 
 def main():
-    rospy.init_node('add_noise')
     rospy.spin()
 
 # IMU information
