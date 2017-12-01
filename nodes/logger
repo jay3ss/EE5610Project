@@ -22,6 +22,7 @@ from tf.transformations import euler_from_quaternion
 # The messages that we need
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import JointState
+from kalman_filter_state_estimation.msg import State
 
 # Python libraries
 from sys import argv
@@ -87,13 +88,13 @@ def joint_state_cb(data):
     v_l = joint_states.velocity[0] * wheel_radius
     v_r = joint_states.velocity[1] * wheel_radius
     write_to_worksheet(t, x, y, theta, v_r, v_l, workbook_sheet)
+
 # Iterator
 i = 2
 
 odom = Odometry()
 joint_states = JointState()
-joint_states.velocity[0] = 0.0
-joint_states.velocity[1] = 0.0
+joint_states.velocity = (0.0, 0.0)
 data_lock = Lock()
 
 # Take the argument from the terminal and use it as part of the filename
@@ -125,13 +126,13 @@ workbook_sheet.write('F1', 'V_l')
 rospy.init_node('test_data_saver')
 rate = rospy.Rate(100)
 
-odom_sub = rospy.Subscriber('/dead_reckoning/odom', Odometry, odom_cb)
+ground_truth_sub = rospy.Subscriber('/ground_truth', Odometry, odom_cb)
 joint_state_sub = rospy.Subscriber('/joint_states', JointState, joint_state_cb)
+
+dead_reckoning_sub = rospy.Subscriber('/dead_reckoning/odom', Odometry, odom_cb)
 
 if __name__ == '__main__':
     rospy.spin()
-
-
 
 # Close the Excel file
 workbook.close()
