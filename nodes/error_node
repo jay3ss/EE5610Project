@@ -1,14 +1,27 @@
 #!/usr/bin/env python
+from sys import argv
+from datetime import datetime
+
+import xlsxwriter
+
 import rospy
+
+from message_filters import ApproximateTimeSynchronizer, Subscriber
+
+from tf.transformations import euler_from_quaternion
 
 from nav_msgs.msg import Odometry
 from kalman_filter_state_estimation.msg import State
 
-odom_topic = '/ground_thruth'
+odom_topic = '/ground_truth'
+dead_reckoning_topic = '/dead_reckoning/odom'
 state_topic = '/state'
 
-odom = Odometry()
-state = State()
+# odom = Odometry()
+# dead_reckoning()
+# state = State()
+
+i = 2
 
 def odom_cb(data):
     pass
@@ -16,8 +29,160 @@ def odom_cb(data):
 def state_cb(data):
     pass
 
-def write(data):
-    pass
+# def write(odom, state):
+def write(odom, kalman, dead_reckoning):
+    """Writes the difference (error) between the ground truth and estimated
+    state and writes it to an Excel for each stat variable.
 
-odom_sub = rospy.Subscriber(odom_sub, Odometry, odom_cb)
-state_sub = rospy.Subscriber(state_topic, State, state_cb)
+    Notation:
+    - xn_, yn_, theta_, xn_dot_, yn_dot_, theta_dot_ are the state variables.
+    - xn, yn, theta, xn_dot, yn_dot, theta_dot are the actual state variables
+      (note the lacking "_" at the end of the name)
+    """
+    global i
+    global sheet
+    # Write to each Excel file
+    t = odom.header.stamp.to_sec()
+    # xn_ = state.pose.position.x
+    # yn_ = state.pose.position.y
+    #
+    # qx = state.pose.orientation.x
+    # qy = state.pose.orientation.y
+    # qz = state.pose.orientation.z
+    # qw = state.pose.orientation.w
+    #
+    # (r, p, theta_) = euler_from_quaternion([qx, qy, qz, qw])
+    #
+    # xn_dot_ = state.velocity.linear.x
+    # yn_dot_ = state.velocity.linear.y
+    # theta_dot_ = state.velocity.angular.z
+    # Kalman
+    xn_ = kalman.pose.pose.position.x
+    yn_ = kalman.pose.pose.position.y
+
+    qx = kalman.pose.pose.orientation.x
+    qy = kalman.pose.pose.orientation.y
+    qz = kalman.pose.pose.orientation.z
+    qw = kalman.pose.pose.orientation.w
+
+    (r, p, theta_) = euler_from_quaternion([qx, qy, qz, qw])
+
+    xn_dot_ = kalman.twist.twist.linear.x
+    yn_dot_ = kalman.twist.twist.linear.y
+    theta_dot_ = kalman.twist.twist.angular.z
+
+    # Ground truth values
+    xn = odom.pose.pose.position.x
+    yn = odom.pose.pose.position.y
+
+    qx = odom.pose.pose.orientation.x
+    qy = odom.pose.pose.orientation.y
+    qz = odom.pose.pose.orientation.z
+    qw = odom.pose.pose.orientation.w
+
+    (r, p, theta) = euler_from_quaternion([qx, qy, qz, qw])
+
+    xn_dot = odom.twist.twist.linear.x
+    yn_dot = odom.twist.twist.linear.y
+    theta_dot = odom.twist.twist.angular.z
+
+    kx_error = xn_ - xn
+    ky_error = yn_ - yn
+    ktheta_error = theta_ - theta
+
+    kx_dot_error = xn_dot_ - xn_dot
+    ky_dot_error = yn_dot_ - yn_dot
+    ktheta_dot_error = theta_dot_ - theta_dot
+
+
+    # Dead reckoning
+    xn_ = dead_reckoning.pose.pose.position.x
+    yn_ = dead_reckoning.pose.pose.position.y
+
+    qx = dead_reckoning.pose.pose.orientation.x
+    qy = dead_reckoning.pose.pose.orientation.y
+    qz = dead_reckoning.pose.pose.orientation.z
+    qw = dead_reckoning.pose.pose.orientation.w
+
+    (r, p, theta_) = euler_from_quaternion([qx, qy, qz, qw])
+
+    xn_dot_ = dead_reckoning.twist.twist.linear.x
+    yn_dot_ = dead_reckoning.twist.twist.linear.y
+    theta_dot_ = dead_reckoning.twist.twist.angular.z
+
+    drx_error = xn_ - xn
+    dry_error = yn_ - yn
+    drtheta_error = theta_ - theta
+
+    drx_dot_error = xn_dot_ - xn_dot
+    dry_dot_error = yn_dot_ - yn_dot
+    drtheta_dot_error = theta_dot_ - theta_dot
+
+    sheet.write('A{}'.format(i), t)
+    sheet.write('B{}'.format(i), kx_error)
+    sheet.write('C{}'.format(i), ky_error)
+    sheet.write('D{}'.format(i), ktheta_error)
+    sheet.write('E{}'.format(i), kx_dot_error)
+    sheet.write('F{}'.format(i), ky_dot_error)
+    sheet.write('G{}'.format(i), ktheta_dot_error)
+
+    sheet.write('H{}'.format(i), drx_error)
+    sheet.write('I{}'.format(i), dry_error)
+    sheet.write('J{}'.format(i), drtheta_error)
+    sheet.write('K{}'.format(i), drx_dot_error)
+    sheet.write('L{}'.format(i), dry_dot_error)
+    sheet.write('M{}'.format(i), drtheta_dot_error)
+    i += 1
+
+odom_sub = Subscriber(odom_topic, Odometry)
+dead_reckoning_sub = Subscriber(dead_reckoning_topic, Odometry)
+# state_sub = Subscriber(state_topic, State)
+kalman_topic = '/kalman/odom'
+kalman_sub = Subscriber(kalman_topic, Odometry)
+
+# ats = ApproximateTimeSynchronizer([odom_sub, state_sub], queue_size=5, slop=0.1)
+ats = ApproximateTimeSynchronizer(
+    [odom_sub, kalman_sub, dead_reckoning_sub],
+    queue_size=5,
+    slop=0.1)
+ats.registerCallback(write)
+
+# Take the argument from the terminal and use it as part of the filename
+script, test_name = argv
+
+# Create the file name
+timestamp = datetime.now().strftime('%Y-%m-%d-%H-%M-%S')
+filename = test_name + '-' + timestamp +  '.xlsx'
+
+# Create the Excel files with the given file name
+workbook = xlsxwriter.Workbook(filename)
+sheet = workbook.add_worksheet()
+
+# Widen the first column to make the text clearer.
+sheet.set_column('A:A', 20)
+
+# Write the titles of each column
+# Horizontal of graph, then vertical
+# horizontal = 'Time (s)'
+sheet.write('A1', 'Time (s)')
+sheet.write('B1', 'X')
+sheet.write('C1', 'Y')
+sheet.write('D1', 'Theta')
+sheet.write('E1', 'X_dot')
+sheet.write('F1', 'Y_dot')
+sheet.write('G1', 'Theta_dot')
+
+sheet.write('H1', 'X')
+sheet.write('I1', 'Y')
+sheet.write('J1', 'Theta')
+sheet.write('K1', 'X_dot')
+sheet.write('L1', 'Y_dot')
+sheet.write('M1', 'Theta_dot')
+
+# ROS initializations
+rospy.init_node('test_data_saver')
+
+if __name__ == '__main__':
+    rospy.spin()
+
+workbook.close()
