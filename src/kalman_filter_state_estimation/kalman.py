@@ -1,3 +1,4 @@
+import math
 import numpy as np
 
 class Kalman(object):
@@ -26,23 +27,32 @@ class Kalman(object):
         # self.H = np.identity(6)
 
         #Process/State noise
-        vel_noise_std = 2
-        pos_noise_std = 5
+        pos_noise_std = 50
+        vel_noise_std = 7.1
+        ang_noise_std = 1
         self.Q = np.array([
             [pos_noise_std*pos_noise_std,0,0,0,0,0],
             [0,pos_noise_std*pos_noise_std,0,0,0,0],
-            [0,0,pos_noise_std*pos_noise_std,0,0,0],
+            [0,0,ang_noise_std*ang_noise_std,0,0,0],
             [0,0,0,vel_noise_std*vel_noise_std,0,0],
             [0,0,0,0,vel_noise_std*vel_noise_std,0],
-            [0,0,0,0,0,vel_noise_std*vel_noise_std]
+            [0,0,0,0,0,ang_noise_std*ang_noise_std]
         ])
 
         #Sensor/Measurement noise
-        measurement_noise_std = 15
+        measurement_noise_std = 1000
         self.R = measurement_noise_std * measurement_noise_std * np.identity(6)
 
-        self.x = np.zeros((6,1)) #Initial state vector [x,y,th,vx,vy,vth]
-        self.sigma = np.identity(6) #Initial covariance matrix
+        # self.x = np.zeros((6,1)) #Initial state vector [x,y,th,vx,vy,vth]
+        self.x = np.array([
+            [0.0],
+            [0.0],
+            [-0.08946428280993846],
+            [-0.2],
+            [0.1],
+            [0.0]
+        ])
+        self.sigma = np.identity(6)*100 #Initial covariance matrix
 
     def predictState(self, A, x):
         '''
