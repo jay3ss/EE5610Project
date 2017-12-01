@@ -1,0 +1,71 @@
+#!/usr/bin/env python
+"""Take the odometry from the ground truth, dead reckoning, and Kalman filter
+and paint paths with each"""
+
+import rospy
+
+from nav_msgs.msg import Path
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseStamped
+
+rospy.init_node('path_painter')
+
+def ground_truth_cb(data):
+    global ground_truth_path
+    ground_truth_path.header = data.header
+    pose = PoseStamped()
+    pose.header = data.header
+    pose.pose = data.pose.pose
+    ground_truth_path.poses.append(pose)
+    ground_truth_pub.publish(ground_truth_path)
+
+def dead_reckoning_cb(data):
+    global dead_reckoning_path
+    dead_reckoning_path.header = data.header
+    pose = PoseStamped()
+    pose.header = data.header
+    pose.pose = data.pose.pose
+    dead_reckoning_path.poses.append(pose)
+    dead_reckoning_pub.publish(dead_reckoning_path)
+
+def kalman_filter_cb(data):
+    global kalman_filter_path
+    kalman_filter_path.header = data.header
+    pose = PoseStamped()
+    pose.header = data.header
+    pose.pose = data.pose.pose
+    kalman_filter_path.poses.append(pose)
+    kalman_filter_pub.publish(kalman_filter_path)
+
+# Ground truth: Subscriber and publisher
+name = '/ground_truth'
+ground_truth_topic = rospy.get_param('~ground_truth_sub_topic', name)
+ground_truth_sub = rospy.Subscriber(
+    ground_truth_topic, Odometry, ground_truth_cb)
+name = '/ground_truth_path'
+ground_truth_topic = rospy.get_param('~ground_truth_pub_topic', name)
+ground_truth_pub = rospy.Publisher(ground_truth_topic, Path, queue_size=10000)
+ground_truth_path = Path()
+
+# Dead reckoning: Subscriber and publisher
+name = '/dead_reckoning/odom'
+dead_reckoning_topic = rospy.get_param('~dead_reckoning_sub_topic', name)
+dead_reckoning_sub = rospy.Subscriber(
+    dead_reckoning_topic, Odometry, dead_reckoning_cb)
+name = '/dead_reckoning/path'
+dead_reckoning_topic = rospy.get_param('~dead_reckoning_pub_topic', name)
+dead_reckoning_pub = rospy.Publisher(dead_reckoning_topic, Path, queue_size=10000)
+dead_reckoning_path = Path()
+
+# Kalman filter: Subscriber and publisher
+name = '/kalman/odom'
+kalman_filter_topic = rospy.get_param('~kalman_filter_sub_topic', name)
+dead_reckoning_sub = rospy.Subscriber(
+    kalman_filter_topic, Odometry, kalman_filter_cb)
+name = '/kalman/path'
+kalman_filter_topic = rospy.get_param('~kalman_filter_pub_topic', name)
+kalman_filter_pub = rospy.Publisher(kalman_filter_topic, Path, queue_size=10000)
+kalman_filter_path = Path()
+
+if __name__ == '__main__':
+    rospy.spin()
