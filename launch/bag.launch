@@ -1,5 +1,5 @@
 <launch>
-    <arg name="bag_file" default="$(find kalman_filter_state_estimation)/bags/square_using_imu.bag"/>
-    <arg name="args" default="--clock --loop --pause $(arg bag_file)"/>
+    <arg name="bag_file" default="$(find kalman_filter_state_estimation)/bags/noisy_data.bag"/>
+    <arg name="args" default="--loop $(arg bag_file)"/>
     <node pkg="rosbag" type="play" name="player" output="screen" args="$(arg args)"/>
 </launch>
