@@ -21,7 +21,7 @@ class ROSKalman(Kalman):
     def __init__(self):
         """Constructor"""
         rospy.init_node('kalman')
-        prediction_rate = rospy.get_param('~prediction_rate', 50)
+        prediction_rate = rospy.get_param('~prediction_rate', 100)
         # correction_rate = rospy.get_param('~correction_rate', 13)
         self.rate = rospy.Rate(prediction_rate)
         self.header = Header()
@@ -127,7 +127,8 @@ class ROSKalman(Kalman):
 
     def state_cb(self, data):
         with self.data_lock:
-            self.header.stamp = data.header.stamp
+            # self.header.stamp = data.header.stamp
+            data.header.stamp = rospy.Time.now()
         xn = data.pose.position.x
         yn = data.pose.position.y
 
@@ -161,8 +162,8 @@ class ROSKalman(Kalman):
         odom = Odometry()
         # odom.header = self.header
         with self.data_lock:
-            odom.header.stamp = self.header.stamp
-        # odom.header.stamp = rospy.get_rostime()
+            # odom.header.stamp = self.header.stamp
+            odom.header.stamp = rospy.Time.now()
         odom.header.frame_id = self.odom_frame_id
         odom.child_frame_id = self.odom_child_frame_id
         odom.pose.pose.position.x = self.get_x()
