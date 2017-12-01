@@ -20,17 +20,19 @@ class ROSDeadReckoning(DeadReckoning):
         rospy.init_node('dead_reckoning', anonymous=True)
         rospy.loginfo('dead_reckoning node started')
 
+        self.data_lock = Lock()
+
         update_rate = rospy.get_param('~update_rate', 5)
         self.rate = rospy.Rate(update_rate)
 
         # IMU information
         # Not using IMU information anymore
-        name = '/mobile_base/sensors/imu_data'
+        name = '/noisy/imu'
         imu_topic = rospy.get_param('~imu_topic', name)
         imu_sub = rospy.Subscriber(imu_topic, Imu, self.imu_cb)
 
         # JointState information
-        name = '/joint_states'
+        name = '/noisy/joint_states'
         imu_topic = rospy.get_param('~joint_state_topic', name)
         joint_state_sub = rospy.Subscriber(
             imu_topic, JointState, self.joint_state_cb)
@@ -59,14 +61,13 @@ class ROSDeadReckoning(DeadReckoning):
         self.odom.header.frame_id = self.odom_frame_id
         self.odom.child_frame_id = self.odom_child_frame_id
 
-        self.data_lock = Lock()
-
         super(ROSDeadReckoning, self).__init__(
             wheel_radius, wheel_distance, dt, init_state)
 
     def imu_cb(self, data):
         with self.data_lock:
             self.odom.header.stamp = data.header.stamp
+            # self.odom.header.stamp = rospy.Time.now()
         self.angular_velocity = data.angular_velocity.z
         qx = data.orientation.x
         qy = data.orientation.y
@@ -80,6 +81,7 @@ class ROSDeadReckoning(DeadReckoning):
         # v_r = self.state.wheel_radius * data.velocity[1]
         with self.data_lock:
             self.odom.header.stamp = data.header.stamp
+            # self.odom.header.stamp = rospy.Time.now()
         v_l = data.velocity[0]
         v_r = data.velocity[1]
         self.update_velocities(v_r, v_l)
