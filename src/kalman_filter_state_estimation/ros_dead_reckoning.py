@@ -66,8 +66,8 @@ class ROSDeadReckoning(DeadReckoning):
 
     def imu_cb(self, data):
         with self.data_lock:
-            self.odom.header.stamp = data.header.stamp
-            # self.odom.header.stamp = rospy.Time.now()
+            # self.odom.header.stamp = data.header.stamp
+            self.odom.header.stamp = rospy.Time.now()
         self.angular_velocity = data.angular_velocity.z
         qx = data.orientation.x
         qy = data.orientation.y
