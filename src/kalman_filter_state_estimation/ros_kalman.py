@@ -22,6 +22,7 @@ class ROSKalman(Kalman):
         """Constructor"""
         rospy.init_node('kalman')
         prediction_rate = rospy.get_param('~prediction_rate', 100)
+        dt = 1/prediction_rate
         # correction_rate = rospy.get_param('~correction_rate', 13)
         self.rate = rospy.Rate(prediction_rate)
         self.header = Header()
@@ -45,7 +46,58 @@ class ROSKalman(Kalman):
         self.odom_child_frame_id = rospy.get_param(
             '~odom_child_frame_id', 'base_link')
 
-        super(ROSKalman, self).__init__(1/prediction_rate)
+        init_x = [
+            [0.0],
+            [0.0],
+            [-0.08946428280993846],
+            [-0.2],
+            [0.1],
+            [0.0]
+        ]
+
+        F = [
+            [1,0,dt,0,0,0],
+            [0,1,0,dt,0,0],
+            [0,0,1,0,dt,0],
+            [0,0,0,1,0,0],
+            [0,0,0,0,1,0],
+            [0,0,0,0,0,1]
+        ]
+
+        H = [
+            [1,0,0,0,0,0],
+            [0,1,0,0,0,0],
+            [0,0,1,0,0,0],
+            [0,0,0,1,0,0],
+            [0,0,0,0,1,0],
+            [0,0,0,0,0,1]
+        ]
+
+        P = [
+            [1,0,0,0,0,0],
+            [0,1,0,0,0,0],
+            [0,0,1,0,0,0],
+            [0,0,0,1,0,0],
+            [0,0,0,0,1,0],
+            [0,0,0,0,0,1]
+        ]
+
+        #Process/State noise
+        pos_noise_std = 1#5*math.pi/180 # degrees
+        vel_noise_std = 1#5*math.pi/180 # degrees
+        ang_noise_std = 1#5*math.pi/180 # degrees
+        Q = [
+            [pos_noise_std*pos_noise_std,0,0,0,0,0],
+            [0,pos_noise_std*pos_noise_std,0,0,0,0],
+            [0,0,ang_noise_std*ang_noise_std,0,0,0],
+            [0,0,0,vel_noise_std*vel_noise_std,0,0],
+            [0,0,0,0,vel_noise_std*vel_noise_std,0],
+            [0,0,0,0,0,ang_noise_std*ang_noise_std]
+        ]
+
+        R = 1e-9
+
+        super(ROSKalman, self).__init__(init_x, F, H, P, R, Q, dt)
 
         self.wheel_radius = rospy.get_param('~wheel_radius', 0.035)
         self.wheel_distance = rospy.get_param('~wheel_distance', 0.230)
@@ -56,25 +108,25 @@ class ROSKalman(Kalman):
         # self.num_js_calls = 0
 
     def get_error_covariance(self):
-        return self.sigma.flatten().tolist()
+        return self.kalman.P.flatten().tolist()
 
     def get_x(self):
-        return self.x.item(0)
+        return self.kalman.x.item(0)
 
     def get_xdot(self):
-        return self.x.item(3)
+        return self.kalman.x.item(3)
 
     def get_y(self):
-        return self.x.item(1)
+        return self.kalman.x.item(1)
 
     def get_ydot(self):
-        return self.x.item(4)
+        return self.kalman.x.item(4)
 
     def get_theta(self):
-        return self.x.item(2)
+        return self.kalman.x.item(2)
 
     def get_thetadot(self):
-        return self.x.item(5)
+        return self.kalman.x.item(5)
 
     # def joint_state_cb(self, data):
     #     self.num_js_calls += 1
@@ -131,7 +183,7 @@ class ROSKalman(Kalman):
     def state_cb(self, data):
         with self.data_lock:
             # self.header.stamp = data.header.stamp
-            data.header.stamp = rospy.Time.now()
+            self.header.stamp = rospy.Time.now()
         xn = data.pose.position.x
         yn = data.pose.position.y
 
@@ -146,16 +198,21 @@ class ROSKalman(Kalman):
 
         (r, p, yaw) = euler_from_quaternion([qx, qy, qz, qw])
 
-        measurement = np.array([
+        # measurement = np.array([
+        #     [xn], [yn], [yaw],
+        #     [x_dot], [y_dot], [theta_dot]
+        # ])
+
+        measurement = [
             [xn], [yn], [yaw],
             [x_dot], [y_dot], [theta_dot]
-        ])
+        ]
 
-        k = self.calculateKalmanGain(self.sigma, self.H, self.R)
-
-        self.x = self.correctState(measurement, self.x, k, self.H)
-        self.sigma = self.correctCovariance(self.sigma, k, self.H)
-
+        # k = self.calculateKalmanGain(self.sigma, self.H, self.R)
+        #
+        # self.x = self.correctState(measurement, self.x, k, self.H)
+        # self.sigma = self.correctCovariance(self.sigma, k, self.H)
+        self.kalman.update(measurement)
         print('State')
         print('x: %f\ty: %f\t theta: %f'%(xn, yn, yaw))
         print('x_dot: %f\ty_dot: %f\t theta_dot: %f'%(x_dot, y_dot, theta_dot))
@@ -186,7 +243,7 @@ class ROSKalman(Kalman):
 
     def run(self):
         while not rospy.is_shutdown():
-            self.state_callback()
+            self.kalman.predict()
             self.publish_state()
             self.rate.sleep()
         # A = self.A
