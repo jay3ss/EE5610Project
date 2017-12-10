@@ -55,6 +55,9 @@ class ROSKalman(Kalman):
         # self.throttle = 20
         # self.num_js_calls = 0
 
+    def get_error_covariance(self):
+        return self.sigma.flatten().tolist()
+
     def get_x(self):
         return self.x.item(0)
 
