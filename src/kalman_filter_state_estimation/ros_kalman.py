@@ -174,6 +174,10 @@ class ROSKalman(Kalman):
         quat = quaternion_from_euler(0, 0, self.get_theta())
         odom.pose.pose.orientation.z = quat[2]
         odom.pose.pose.orientation.w = quat[3]
+        # HACK
+        # This is fundamentally incorrect. The covariance of filter contains
+        # covariances of pose and velocities. This is necessary right now though
+        odom.pose.covariance = self.get_error_covariance()
         odom.twist.twist.linear.x = self.get_xdot()
         odom.twist.twist.linear.y = self.get_ydot()
         odom.twist.twist.angular.z = self.get_thetadot()
