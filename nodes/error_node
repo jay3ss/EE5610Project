@@ -118,6 +118,10 @@ def write(odom, kalman, dead_reckoning):
     dry_dot_error = yn_dot_ - yn_dot
     drtheta_dot_error = theta_dot_ - theta_dot
 
+    cov_x = kalman.pose.covariance[0]
+    cov_y = kalman.pose.covariance[7]
+    cov_theta = kalman.pose.covariance[14]
+
     sheet.write('A{}'.format(i), t)
     sheet.write('B{}'.format(i), kx_error)
     sheet.write('C{}'.format(i), ky_error)
@@ -132,6 +136,10 @@ def write(odom, kalman, dead_reckoning):
     sheet.write('K{}'.format(i), drx_dot_error)
     sheet.write('L{}'.format(i), dry_dot_error)
     sheet.write('M{}'.format(i), drtheta_dot_error)
+
+    sheet.write('N{}'.format(i), cov_x)
+    sheet.write('O{}'.format(i), cov_y)
+    sheet.write('P{}'.format(i), cov_theta)
     i += 1
 
 odom_sub = Subscriber(odom_topic, Odometry)
@@ -178,6 +186,10 @@ sheet.write('J1', 'Theta')
 sheet.write('K1', 'X_dot')
 sheet.write('L1', 'Y_dot')
 sheet.write('M1', 'Theta_dot')
+
+sheet.write('N1', 'Cov X')
+sheet.write('O1', 'Cov Y')
+sheet.write('P1', 'Cov Z')
 
 # ROS initializations
 rospy.init_node('test_data_saver')

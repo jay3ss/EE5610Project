@@ -84,8 +84,8 @@ class ROSKalman(Kalman):
 
         #Process/State noise
         pos_noise_std = 1#5*math.pi/180 # degrees
-        vel_noise_std = 1#5*math.pi/180 # degrees
-        ang_noise_std = 1#5*math.pi/180 # degrees
+        vel_noise_std = 1e-3#5*math.pi/180 # degrees
+        ang_noise_std = 1e-3#5*math.pi/180 # degrees
         Q = [
             [pos_noise_std*pos_noise_std,0,0,0,0,0],
             [0,pos_noise_std*pos_noise_std,0,0,0,0],
@@ -94,6 +94,8 @@ class ROSKalman(Kalman):
             [0,0,0,0,vel_noise_std*vel_noise_std,0],
             [0,0,0,0,0,ang_noise_std*ang_noise_std]
         ]
+
+        # P = Q
 
         R = 1e-9
 

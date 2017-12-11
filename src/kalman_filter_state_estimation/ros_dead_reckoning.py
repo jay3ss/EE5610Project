@@ -80,8 +80,8 @@ class ROSDeadReckoning(DeadReckoning):
         # v_l = self.state.wheel_radius * data.velocity[0]
         # v_r = self.state.wheel_radius * data.velocity[1]
         with self.data_lock:
-            self.odom.header.stamp = data.header.stamp
-            # self.odom.header.stamp = rospy.Time.now()
+            # self.odom.header.stamp = data.header.stamp
+            self.odom.header.stamp = rospy.Time.now()
         v_l = data.velocity[0]
         v_r = data.velocity[1]
         self.update_velocities(v_r, v_l)
